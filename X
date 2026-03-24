@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Mi App</title>
+</head>
+<body>
+
+<h1>Mi primera app 🚀</h1>
+
+<button onclick="saludar()">Click</button>
+
+<script>
+function saludar() {
+  alert("Hola, ya estás creando apps 😎");
+}
+</script>
+
+</body>
+</html>
