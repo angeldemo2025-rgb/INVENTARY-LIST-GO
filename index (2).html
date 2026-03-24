@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>Inventario Pro</title>
+
+<style>
+body{
+  margin:0;
+  font-family:Arial;
+  background:#0f172a;
+  color:white;
+}
+
+header{
+  padding:15px;
+  font-size:22px;
+  font-weight:bold;
+}
+
+#app{
+  padding:10px;
+}
+
+.card{
+  background:#111;
+  padding:15px;
+  margin:10px 0;
+  border-radius:10px;
+}
+
+button{
+  margin:5px;
+  padding:8px 10px;
+  border:none;
+  border-radius:8px;
+  cursor:pointer;
+}
+
+.add-btn{
+  position:fixed;
+  bottom:20px;
+  right:20px;
+  width:60px;
+  height:60px;
+  border-radius:50%;
+  font-size:25px;
+  background:#00bcd4;
+  color:white;
+}
+
+.item{
+  display:flex;
+  justify-content:space-between;
+  background:#1e293b;
+  margin:5px 0;
+  padding:8px;
+  border-radius:6px;
+}
+</style>
+</head>
+
+<body>
+
+<header>Inventario</header>
+
+<div id="app"></div>
+
+<button class="add-btn" onclick="accionPrincipal()">+</button>
+
+<!-- 🔥 FIREBASE -->
+<script type="module">
+
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import { 
+  getFirestore, collection, addDoc, getDocs, deleteDoc, doc, updateDoc 
+} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+const firebaseConfig = {
+  apiKey: "TU_API_KEY",
+  authDomain: "inventario-app-6b886.firebaseapp.com",
+  projectId: "inventario-app-6b886",
+  storageBucket: "inventario-app-6b886.appspot.com",
+  messagingSenderId: "200201210795",
+  appId: "1:200201210795:web:5d71eb5e67921b731920ee"
+};
+
+const appFirebase = initializeApp(firebaseConfig);
+const db = getFirestore(appFirebase);
+
+let data = [];
+let vista = "listas";
+let listaActual = null;
+
+// 🔥 GUARDAR LISTA
+async function crearLista(nombre){
+  await addDoc(collection(db,"listas"),{
+    nombre,
+    items:[]
+  });
+  cargar();
+}
+
+// 🔥 CARGAR
+async function cargar(){
+  const query = await getDocs(collection(db,"listas"));
+  data = [];
+  query.forEach(docu=>{
+    data.push({id:docu.id,...docu.data()});
+  });
+  render();
+}
+
+// 🔥 AGREGAR ITEM
+async function agregarItem(){
+  let nombre = prompt("Artículo");
+  let cantidad = prompt("Cantidad");
+
+  if(!nombre) return;
+
+  listaActual.items.push({nombre,cantidad});
+
+  await updateDoc(doc(db,"listas",listaActual.id),{
+    items: listaActual.items
+  });
+
+  cargar();
+}
+
+// 🔥 ELIMINAR ITEM
+async function eliminarItem(index){
+  listaActual.items.splice(index,1);
+
+  await updateDoc(doc(db,"listas",listaActual.id),{
+    items: listaActual.items
+  });
+
+  cargar();
+}
+
+// 🔥 EDITAR ITEM
+async function editarItem(index){
+  let item = listaActual.items[index];
+
+  let nuevoNombre = prompt("Editar nombre", item.nombre);
+  let nuevaCantidad = prompt("Editar cantidad", item.cantidad);
+
+  if(!nuevoNombre) return;
+
+  listaActual.items[index] = {
+    nombre:nuevoNombre,
+    cantidad:nuevaCantidad
+  };
+
+  await updateDoc(doc(db,"listas",listaActual.id),{
+    items: listaActual.items
+  });
+
+  cargar();
+}
+
+// 🔥 ELIMINAR LISTA
+async function eliminarLista(id){
+  await deleteDoc(doc(db,"listas",id));
+  cargar();
+}
+
+// 🔥 RENDER
+function render(){
+  let app = document.getElementById("app");
+  app.innerHTML="";
+
+  if(vista==="listas"){
+    data.forEach(lista=>{
+      let div = document.createElement("div");
+      div.className="card";
+
+      div.innerHTML=`
+        <h3>${lista.nombre}</h3>
+        <button onclick="abrirLista('${lista.id}')">Abrir</button>
+        <button onclick="eliminarLista('${lista.id}')">🗑</button>
+      `;
+
+      app.appendChild(div);
+    });
+  }
+
+  if(vista==="items"){
+    let titulo = document.createElement("h2");
+    titulo.innerText = listaActual.nombre;
+    app.appendChild(titulo);
+
+    let back = document.createElement("button");
+    back.innerText="⬅ Volver";
+    back.onclick=()=>{
+      vista="listas";
+      render();
+    };
+    app.appendChild(back);
+
+    listaActual.items.forEach((item,i)=>{
+      let div = document.createElement("div");
+      div.className="item";
+
+      div.innerHTML=`
+        <span>${item.nombre} (${item.cantidad})</span>
+        <div>
+          <button onclick="editarItem(${i})">✏</button>
+          <button onclick="eliminarItem(${i})">❌</button>
+        </div>
+      `;
+
+      app.appendChild(div);
+    });
+  }
+}
+
+// 🔥 ABRIR LISTA
+window.abrirLista = function(id){
+  listaActual = data.find(l=>l.id===id);
+  vista="items";
+  render();
+};
+
+// 🔥 BOTON +
+window.accionPrincipal = function(){
+  if(vista==="listas"){
+    let nombre = prompt("Nombre de la lista");
+    if(nombre) crearLista(nombre);
+  }else{
+    agregarItem();
+  }
+};
+
+window.eliminarLista = eliminarLista;
+window.editarItem = editarItem;
+window.eliminarItem = eliminarItem;
+
+cargar();
+
+</script>
+
+</body>
+</html>
